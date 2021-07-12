@@ -83,13 +83,59 @@ void loop() {
     gps.encode(Serial.read());
   }
 
- if (SD.begin())
-  {
+if ((unsigned long)(millis() - previousMillis) >= 1000){
     lcd.setCursor(10,0); 
-    lcd.print("OK"); 
-  } 
-    if ((unsigned long)(millis() - previousMillis) >= 1000){
-        myFile = SD.open("coba2.txt", FILE_WRITE);
+    lcd.print("OK");
+    previousMillis = millis();
+    NulisSdCard();
+  } else{
+    lcd.setCursor(10,0); 
+    lcd.print("ER");
+  }
+
+  //line 1
+  lcd.setCursor(0,0); 
+  lcd.print("ITS MSBT"); 
+  lcd.setCursor(14,0);
+  lcd.print(gps.satellites.value());
+
+  //line 2
+  lcd.setCursor(0,1);
+  lcd.print((vin*current),1);
+  lcd.setCursor(6,1);
+  lcd.print("W");
+  lcd.setCursor(8,1);
+  lcd.print(rtc.getTimeStr());
+
+  //line 3 SAMA line 4 POSISI 0 NYA DI -4
+  //line 3
+  lcd.setCursor(-4,2);
+  lcd.print(vin,1);
+  lcd.setCursor(2,2);
+  lcd.print("V");
+  lcd.setCursor(4,2);
+  lcd.print((gps.speed.kmph()),1);
+  lcd.setCursor(9,2);
+  lcd.print("kph");
+  
+  //line 4
+  lcd.setCursor(-4,3);
+  lcd.print(current,1);
+  lcd.setCursor(2,3);
+  lcd.print("A");
+  lcd.setCursor(4,3);
+  lcd.print(temp,1);
+  lcd.setCursor(10,3);
+  lcd.print("C");
+  lcd.setCursor(9,3);
+  lcd.print((char)223);
+
+}
+
+//ngirim esp 8266
+
+void NulisSdCard(){
+   myFile = SD.open("coba2.txt", FILE_WRITE);
     if (myFile) {
     myFile.print(F("Date: "));    
     myFile.print(rtc.getDateStr());
@@ -132,44 +178,22 @@ void loop() {
   else {
     lcd.setCursor(10,0); 
     lcd.print("ER");
+  }
 }
-}
-  //line 1
-  lcd.setCursor(0,0); 
-  lcd.print("ITS MSBT"); 
-  lcd.setCursor(14,0);
-  lcd.print(gps.satellites.value());
 
-  //line 2
-  lcd.setCursor(0,1);
-  lcd.print((vin*current),1);
-  lcd.setCursor(6,1);
-  lcd.print("W");
-  lcd.setCursor(8,1);
-  lcd.print(rtc.getTimeStr());
+void serialEvent(){
+  if(Serial.read()==100){
+float kecepatan = gps.speed.kmph();
+float power = vin*current;  
+StaticJsonDocument<50> doc;
 
-  //line 3 SAMA line 4 POSISI 0 NYA DI -4
-  //line 3
-  lcd.setCursor(-4,2);
-  lcd.print(vin,1);
-  lcd.setCursor(2,2);
-  lcd.print("V");
-  lcd.setCursor(4,2);
-  lcd.print((gps.speed.kmph()),1);
-  lcd.setCursor(9,2);
-  lcd.print("kph");
-  
-  //line 4
-  lcd.setCursor(-4,3);
-  lcd.print(current,1);
-  lcd.setCursor(2,3);
-  lcd.print("A");
-  lcd.setCursor(4,3);
-  lcd.print(temp,1);
-  lcd.setCursor(10,3);
-  lcd.print("C");
-  lcd.setCursor(9,3);
-  lcd.print((char)223);
+JsonArray data = doc.createNestedArray("data");
+data.add(vin);
+data.add(current);
+data.add(kecepatan);
+data.add(power);
+data.add(temp);
 
-  //buatJson(vin, current, temp);
+serializeJson(doc, Serial);
+  }
 }
